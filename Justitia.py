@@ -10,9 +10,11 @@ st.set_page_config(
 st.title("Justitia-Replying to your queries")
 
 #setting up model
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") # Secret api key
+# GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") # Secret api key
+
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 #function for avatar of markdowns
 def get_avatar(role):
@@ -58,11 +60,14 @@ if prompt := st.chat_input("What is up?"):
         response = "(Mock reply): Hello there!"
         # else:
         try:
-            chat = model.start_chat(history=[
-                {"role": m["role"], "parts": [m["content"]]}
-                for m in st.session_state.messages
-                if m["role"] in ["user", "assistant"]
-            ])
+            formatted_history = [
+                {
+                    "role": "user" if m["role"] == "user" else "model", 
+                    "parts": [m["content"]]
+                }
+                for m in st.session_state.messages[:-1] # Exclude the current prompt
+            ]
+            chat = model.start_chat(history=formatted_history)
             result = chat.send_message(prompt)
             response = result.text
         except GoogleAPIError as e:
